@@ -52,9 +52,14 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    fetchTodayData();
-    fetchMonthlyData();
-    fetchOvertimeBalance();
+    // 前月の過不足を自動精算してからデータ��得
+    const init = async () => {
+      await fetch("/api/users/overtime/settle", { method: "POST" });
+      fetchTodayData();
+      fetchMonthlyData();
+      fetchOvertimeBalance();
+    };
+    init();
   }, []);
 
   const fetchTodayData = async () => {
@@ -192,7 +197,6 @@ export default function DashboardPage() {
             <div>
               <p className="text-xs text-gray-400">今月の総労働時間</p>
               <p className="text-xl font-bold text-gray-800">{formatDuration(totalWorkMinutes)}</p>
-              <p className="text-xs text-gray-400 mt-0.5">規定: {formatDuration(requiredWorkMinutes)}</p>
             </div>
           </div>
         </div>
@@ -206,9 +210,12 @@ export default function DashboardPage() {
             </div>
             <div>
               <p className="text-xs text-gray-400">今月の残り勤務時間</p>
-              <p className={`text-xl font-bold ${remainingWorkMinutes <= 0 ? "text-green-600" : "text-gray-800"}`}>
+              <p className={`text-xl font-bold ${remainingWorkMinutes <= 0 ? "text-green-600" : "text-red-600"}`}>
                 {remainingWorkMinutes <= 0 ? "達成済" : formatDuration(remainingWorkMinutes)}
               </p>
+              {remainingWorkMinutes > 0 && (
+                <p className="text-xs text-red-400 mt-0.5">未達</p>
+              )}
             </div>
           </div>
         </div>
