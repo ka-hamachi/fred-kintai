@@ -38,6 +38,10 @@ export default function UsersPage() {
   const [saving, setSaving] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // 名前編集
+  const [editingNameUserId, setEditingNameUserId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+
   // 過不足編集
   const [editingOvertimeUserId, setEditingOvertimeUserId] = useState<string | null>(null);
   const [overtimeHours, setOvertimeHours] = useState("");
@@ -87,6 +91,48 @@ export default function UsersPage() {
     }
 
     setSaving(false);
+  };
+
+  const startEditName = (user: User) => {
+    setEditingNameUserId(user.id);
+    setEditingName(user.name);
+  };
+
+  const saveName = async (userId: string) => {
+    if (!editingName.trim()) return;
+    try {
+      const res = await fetch("/api/users", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, name: editingName }),
+      });
+      if (res.ok) {
+        setMessage({ type: "success", text: "名前を変更しました" });
+        setEditingNameUserId(null);
+        fetchUsers();
+      } else {
+        const data = await res.json();
+        setMessage({ type: "error", text: data.error || "エラーが発生しました" });
+      }
+    } catch {
+      setMessage({ type: "error", text: "エラーが発生しました" });
+    }
+  };
+
+  const deleteUser = async (user: User) => {
+    if (!confirm(`「${user.name}」を削除しますか？\n勤怠データも全て削除されます。この操作は取り消せません。`)) return;
+    try {
+      const res = await fetch(`/api/users?userId=${user.id}`, { method: "DELETE" });
+      if (res.ok) {
+        setMessage({ type: "success", text: `${user.name}さんを削除しました` });
+        fetchUsers();
+      } else {
+        const data = await res.json();
+        setMessage({ type: "error", text: data.error || "エラーが発生しました" });
+      }
+    } catch {
+      setMessage({ type: "error", text: "エラーが発生しました" });
+    }
   };
 
   const toggleRole = async (userId: string, currentRole: string) => {
@@ -278,12 +324,33 @@ export default function UsersPage() {
               {users.map((user) => (
                 <tr key={user.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-sm font-medium">
-                        {user.name.charAt(0)}
+                    {editingNameUserId === user.id ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          className="px-2 py-1 border border-gray-200 rounded text-sm text-gray-700 outline-none w-32"
+                          onKeyDown={(e) => e.key === "Enter" && saveName(user.id)}
+                          autoFocus
+                        />
+                        <button onClick={() => saveName(user.id)} className="px-2 py-1 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700">保存</button>
+                        <button onClick={() => setEditingNameUserId(null)} className="px-2 py-1 bg-gray-100 text-gray-500 rounded text-xs font-medium hover:bg-gray-200">取消</button>
                       </div>
-                      <span className="text-sm font-medium text-gray-700">{user.name}</span>
-                    </div>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-sm font-medium">
+                          {user.name.charAt(0)}
+                        </div>
+                        <button
+                          onClick={() => startEditName(user)}
+                          className="text-sm font-medium text-gray-700 hover:text-blue-600 transition-colors"
+                          title="クリックで名前を編集"
+                        >
+                          {user.name}
+                        </button>
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">{user.email}</td>
                   <td className="px-6 py-4">
@@ -356,14 +423,22 @@ export default function UsersPage() {
                     )}
                   </td>
                   <td className="px-6 py-4">
-                    {editingOvertimeUserId !== user.id && (
+                    <div className="flex items-center gap-2">
+                      {editingOvertimeUserId !== user.id && (
+                        <button
+                          onClick={() => startEditOvertime(user)}
+                          className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-xs font-medium hover:bg-amber-100 transition-colors"
+                        >
+                          過不足編集
+                        </button>
+                      )}
                       <button
-                        onClick={() => startEditOvertime(user)}
-                        className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-xs font-medium hover:bg-amber-100 transition-colors"
+                        onClick={() => deleteUser(user)}
+                        className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-medium hover:bg-red-100 transition-colors"
                       >
-                        過不足編集
+                        削除
                       </button>
-                    )}
+                    </div>
                   </td>
                 </tr>
               ))}

@@ -76,17 +76,47 @@ export async function PUT(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { userId, role } = body;
+  const { userId, role, name } = body;
 
-  if (!userId || !role || !["admin", "employee"].includes(role)) {
+  if (!userId) {
     return NextResponse.json({ error: "無効なリクエストです" }, { status: 400 });
+  }
+
+  const data: { role?: string; name?: string } = {};
+  if (role && ["admin", "employee"].includes(role)) data.role = role;
+  if (name && name.trim()) data.name = name.trim();
+
+  if (Object.keys(data).length === 0) {
+    return NextResponse.json({ error: "変更内容がありません" }, { status: 400 });
   }
 
   const user = await prisma.user.update({
     where: { id: userId },
-    data: { role },
+    data,
     select: { id: true, name: true, role: true },
   });
 
   return NextResponse.json(user);
+}
+
+export async function DELETE(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== "admin") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const userId = searchParams.get("userId");
+
+  if (!userId) {
+    return NextResponse.json({ error: "社員IDが必要です" }, { status: 400 });
+  }
+
+  if (userId === session.user.id) {
+    return NextResponse.json({ error: "自分自身は削除できません" }, { status: 400 });
+  }
+
+  await prisma.user.delete({ where: { id: userId } });
+
+  return NextResponse.json({ deleted: true });
 }
