@@ -209,13 +209,17 @@ export default function DashboardPage() {
               </svg>
             </div>
             <div>
-              <p className="text-xs text-gray-400">今月の残り勤務時間</p>
-              <p className={`text-xl font-bold ${remainingWorkMinutes <= 0 ? "text-green-600" : "text-red-600"}`}>
-                {remainingWorkMinutes <= 0 ? "達成済" : formatDuration(remainingWorkMinutes)}
+              <p className="text-xs text-gray-400">
+                今月の残り勤務時間{" "}
+                {remainingWorkMinutes > 0 ? (
+                  <span className="text-red-500 font-medium">未達</span>
+                ) : (
+                  <span className="text-green-500 font-medium">達成済</span>
+                )}
               </p>
-              {remainingWorkMinutes > 0 && (
-                <p className="text-xs text-red-400 mt-0.5">未達</p>
-              )}
+              <p className="text-xl font-bold text-gray-800">
+                {remainingWorkMinutes <= 0 ? "0時間00分" : formatDuration(remainingWorkMinutes)}
+              </p>
             </div>
           </div>
         </div>
