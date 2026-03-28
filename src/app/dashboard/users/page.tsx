@@ -89,6 +89,29 @@ export default function UsersPage() {
     setSaving(false);
   };
 
+  const toggleRole = async (userId: string, currentRole: string) => {
+    const newRole = currentRole === "admin" ? "employee" : "admin";
+    const label = newRole === "admin" ? "管理者" : "従業員";
+    if (!confirm(`権限を「${label}」に変更しますか？`)) return;
+
+    try {
+      const res = await fetch("/api/users", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, role: newRole }),
+      });
+      if (res.ok) {
+        setMessage({ type: "success", text: `権限を「${label}」に変更しました` });
+        fetchUsers();
+      } else {
+        const data = await res.json();
+        setMessage({ type: "error", text: data.error || "エラーが発生しました" });
+      }
+    } catch {
+      setMessage({ type: "error", text: "エラーが発生しました" });
+    }
+  };
+
   const startEditOvertime = (user: User) => {
     const absMinutes = Math.abs(user.overtimeBalance);
     const h = Math.floor(absMinutes / 60);
@@ -264,15 +287,16 @@ export default function UsersPage() {
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">{user.email}</td>
                   <td className="px-6 py-4">
-                    <span
-                      className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
+                    <button
+                      onClick={() => toggleRole(user.id, user.role)}
+                      className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity ${
                         user.role === "admin"
                           ? "bg-purple-100 text-purple-700"
                           : "bg-green-100 text-green-700"
                       }`}
                     >
                       {user.role === "admin" ? "管理者" : "従業員"}
-                    </span>
+                    </button>
                   </td>
                   <td className="px-6 py-4">
                     {editingOvertimeUserId === user.id ? (

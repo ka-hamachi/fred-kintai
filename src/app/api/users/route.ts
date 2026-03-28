@@ -68,3 +68,25 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json(user, { status: 201 });
 }
+
+export async function PUT(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== "admin") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await req.json();
+  const { userId, role } = body;
+
+  if (!userId || !role || !["admin", "employee"].includes(role)) {
+    return NextResponse.json({ error: "無効なリクエストです" }, { status: 400 });
+  }
+
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { role },
+    select: { id: true, name: true, role: true },
+  });
+
+  return NextResponse.json(user);
+}
