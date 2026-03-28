@@ -18,6 +18,7 @@ model User {
   updatedAt        DateTime @updatedAt
 
   attendances Attendance[]
+  dayOffs     DayOff[]
 }
 
 model Attendance {
@@ -35,6 +36,19 @@ model Attendance {
   modifiedAt     DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+}
+
+model DayOff {
+  id        String   @id @default(cuid())
+  userId    String
+  date      String   // YYYY-MM-DD
+  type      String   // "休み", "有給", "午前休", "午後休", "特別休暇"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
