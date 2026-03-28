@@ -23,15 +23,19 @@ function formatTime(dateStr: string | null) {
 
 function formatDuration(minutes: number | null) {
   if (minutes === null || minutes === undefined) return "--:--";
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return `${h}時間${String(m).padStart(2, "0")}分`;
+  const h = Math.floor(Math.abs(minutes) / 60);
+  const m = Math.abs(minutes) % 60;
+  const sign = minutes < 0 ? "-" : "";
+  return `${sign}${h}時間${String(m).padStart(2, "0")}分`;
+}
+
+function getDaysInMonth(year: number, month: number) {
+  return new Date(year, month, 0).getDate();
 }
 
 function getGreeting() {
   const hour = new Date().getHours();
   if (hour < 12) return "おはようございます";
-  if (hour < 18) return "お疲れ様です";
   return "お疲れ様です";
 }
 
@@ -39,6 +43,7 @@ export default function DashboardPage() {
   const { data: session } = useSession();
   const [todayAttendance, setTodayAttendance] = useState<Attendance | null>(null);
   const [monthlyData, setMonthlyData] = useState<Attendance[]>([]);
+  const [overtimeBalance, setOvertimeBalance] = useState<number>(0);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -49,6 +54,7 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchTodayData();
     fetchMonthlyData();
+    fetchOvertimeBalance();
   }, []);
 
   const fetchTodayData = async () => {
@@ -70,6 +76,14 @@ export default function DashboardPage() {
     }
   };
 
+  const fetchOvertimeBalance = async () => {
+    const res = await fetch("/api/users/overtime");
+    if (res.ok) {
+      const data = await res.json();
+      setOvertimeBalance(data?.overtimeBalance || 0);
+    }
+  };
+
   const getStatus = () => {
     if (!todayAttendance?.clockIn) return { text: "未出勤", color: "bg-gray-100 text-gray-600" };
     if (todayAttendance.breakStart && !todayAttendance.breakEnd) return { text: "休憩中", color: "bg-yellow-100 text-yellow-700" };
@@ -81,7 +95,12 @@ export default function DashboardPage() {
 
   const totalWorkDays = monthlyData.filter((a) => a.clockIn).length;
   const totalWorkMinutes = monthlyData.reduce((sum, a) => sum + (a.workDuration || 0), 0);
-  const avgWorkMinutes = totalWorkDays > 0 ? Math.round(totalWorkMinutes / totalWorkDays) : 0;
+
+  // 今月の規定労働時間: (その月の日数 - 8日) × 10時間
+  const now = new Date();
+  const daysInMonth = getDaysInMonth(now.getFullYear(), now.getMonth() + 1);
+  const requiredWorkMinutes = (daysInMonth - 8) * 10 * 60; // 分単位
+  const remainingWorkMinutes = requiredWorkMinutes - totalWorkMinutes;
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
@@ -173,20 +192,7 @@ export default function DashboardPage() {
             <div>
               <p className="text-xs text-gray-400">今月の総労働時間</p>
               <p className="text-xl font-bold text-gray-800">{formatDuration(totalWorkMinutes)}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
-              <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-xs text-gray-400">平均勤務時間/日</p>
-              <p className="text-xl font-bold text-gray-800">{formatDuration(avgWorkMinutes)}</p>
+              <p className="text-xs text-gray-400 mt-0.5">規定: {formatDuration(requiredWorkMinutes)}</p>
             </div>
           </div>
         </div>
@@ -195,13 +201,29 @@ export default function DashboardPage() {
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
               <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
             <div>
-              <p className="text-xs text-gray-400">今月の総休憩時間</p>
-              <p className="text-xl font-bold text-gray-800">
-                {formatDuration(monthlyData.reduce((sum, a) => sum + (a.breakDuration || 0), 0))}
+              <p className="text-xs text-gray-400">今月の残り勤務時間</p>
+              <p className={`text-xl font-bold ${remainingWorkMinutes <= 0 ? "text-green-600" : "text-gray-800"}`}>
+                {remainingWorkMinutes <= 0 ? "達成済" : formatDuration(remainingWorkMinutes)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${overtimeBalance >= 0 ? "bg-purple-50" : "bg-red-50"}`}>
+              <svg className={`w-5 h-5 ${overtimeBalance >= 0 ? "text-purple-600" : "text-red-600"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400">先月までの過不足</p>
+              <p className={`text-xl font-bold ${overtimeBalance > 0 ? "text-purple-600" : overtimeBalance < 0 ? "text-red-600" : "text-gray-800"}`}>
+                {overtimeBalance === 0 ? "±0" : overtimeBalance > 0 ? `+${formatDuration(overtimeBalance)}` : formatDuration(overtimeBalance)}
               </p>
             </div>
           </div>

@@ -9,7 +9,16 @@ interface User {
   email: string;
   name: string;
   role: string;
+  overtimeBalance: number;
   createdAt: string;
+}
+
+function formatDuration(minutes: number) {
+  const h = Math.floor(Math.abs(minutes) / 60);
+  const m = Math.abs(minutes) % 60;
+  const sign = minutes < 0 ? "-" : minutes > 0 ? "+" : "±";
+  if (minutes === 0) return "±0";
+  return `${sign}${h}時間${String(m).padStart(2, "0")}分`;
 }
 
 export default function UsersPage() {
@@ -28,6 +37,12 @@ export default function UsersPage() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // 過不足編集
+  const [editingOvertimeUserId, setEditingOvertimeUserId] = useState<string | null>(null);
+  const [overtimeHours, setOvertimeHours] = useState("");
+  const [overtimeMinutes, setOvertimeMinutes] = useState("");
+  const [overtimeSign, setOvertimeSign] = useState<"+" | "-">("+");
 
   useEffect(() => {
     if (!isAdmin) {
@@ -74,10 +89,44 @@ export default function UsersPage() {
     setSaving(false);
   };
 
+  const startEditOvertime = (user: User) => {
+    const absMinutes = Math.abs(user.overtimeBalance);
+    const h = Math.floor(absMinutes / 60);
+    const m = absMinutes % 60;
+    setEditingOvertimeUserId(user.id);
+    setOvertimeHours(String(h));
+    setOvertimeMinutes(String(m));
+    setOvertimeSign(user.overtimeBalance >= 0 ? "+" : "-");
+  };
+
+  const saveOvertime = async (userId: string) => {
+    const totalMinutes = (parseInt(overtimeHours) || 0) * 60 + (parseInt(overtimeMinutes) || 0);
+    const value = overtimeSign === "-" ? -totalMinutes : totalMinutes;
+
+    try {
+      const res = await fetch("/api/users/overtime", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, overtimeBalance: value }),
+      });
+
+      if (res.ok) {
+        setMessage({ type: "success", text: "過不足労働時間を更新しました" });
+        setEditingOvertimeUserId(null);
+        fetchUsers();
+      } else {
+        const data = await res.json();
+        setMessage({ type: "error", text: data.error || "エラーが発生しました" });
+      }
+    } catch {
+      setMessage({ type: "error", text: "エラーが発生しました" });
+    }
+  };
+
   if (!isAdmin) return null;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">社員管理</h1>
@@ -198,7 +247,8 @@ export default function UsersPage() {
                 <th className="px-6 py-3 font-medium">氏名</th>
                 <th className="px-6 py-3 font-medium">メールアドレス</th>
                 <th className="px-6 py-3 font-medium">権限</th>
-                <th className="px-6 py-3 font-medium">登録日</th>
+                <th className="px-6 py-3 font-medium">過不足労働時間</th>
+                <th className="px-6 py-3 font-medium">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -224,14 +274,78 @@ export default function UsersPage() {
                       {user.role === "admin" ? "管理者" : "従業員"}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-400">
-                    {new Date(user.createdAt).toLocaleDateString("ja-JP")}
+                  <td className="px-6 py-4">
+                    {editingOvertimeUserId === user.id ? (
+                      <div className="flex items-center gap-1.5">
+                        <select
+                          value={overtimeSign}
+                          onChange={(e) => setOvertimeSign(e.target.value as "+" | "-")}
+                          className="px-1.5 py-1 border border-gray-200 rounded text-sm text-gray-700 outline-none"
+                        >
+                          <option value="+">+</option>
+                          <option value="-">-</option>
+                        </select>
+                        <input
+                          type="number"
+                          value={overtimeHours}
+                          onChange={(e) => setOvertimeHours(e.target.value)}
+                          className="w-14 px-2 py-1 border border-gray-200 rounded text-sm text-gray-700 outline-none text-center"
+                          min="0"
+                          placeholder="0"
+                        />
+                        <span className="text-xs text-gray-400">時間</span>
+                        <input
+                          type="number"
+                          value={overtimeMinutes}
+                          onChange={(e) => setOvertimeMinutes(e.target.value)}
+                          className="w-14 px-2 py-1 border border-gray-200 rounded text-sm text-gray-700 outline-none text-center"
+                          min="0"
+                          max="59"
+                          placeholder="0"
+                        />
+                        <span className="text-xs text-gray-400">分</span>
+                        <button
+                          onClick={() => saveOvertime(user.id)}
+                          className="px-2 py-1 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700"
+                        >
+                          保存
+                        </button>
+                        <button
+                          onClick={() => setEditingOvertimeUserId(null)}
+                          className="px-2 py-1 bg-gray-100 text-gray-500 rounded text-xs font-medium hover:bg-gray-200"
+                        >
+                          取消
+                        </button>
+                      </div>
+                    ) : (
+                      <span
+                        className={`text-sm font-medium ${
+                          user.overtimeBalance > 0
+                            ? "text-purple-600"
+                            : user.overtimeBalance < 0
+                            ? "text-red-600"
+                            : "text-gray-500"
+                        }`}
+                      >
+                        {formatDuration(user.overtimeBalance)}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    {editingOvertimeUserId !== user.id && (
+                      <button
+                        onClick={() => startEditOvertime(user)}
+                        className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-xs font-medium hover:bg-amber-100 transition-colors"
+                      >
+                        過不足編集
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
               {users.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-6 py-16 text-center text-gray-400 text-sm">
+                  <td colSpan={5} className="px-6 py-16 text-center text-gray-400 text-sm">
                     社員が登録されていません
                   </td>
                 </tr>

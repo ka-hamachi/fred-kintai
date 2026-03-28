@@ -8,13 +8,14 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String
-  role      String   @default("employee") // "admin" or "employee"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(cuid())
+  email            String   @unique
+  name             String
+  password         String
+  role             String   @default("employee") // "admin" or "employee"
+  overtimeBalance  Int      @default(0) // 先月までの過不足労働時間（分単位）
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   attendances Attendance[]
 }

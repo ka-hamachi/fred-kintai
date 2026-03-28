@@ -16,6 +16,7 @@ export async function GET() {
       email: true,
       name: true,
       role: true,
+      overtimeBalance: true,
       createdAt: true,
     },
     orderBy: { createdAt: "desc" },
