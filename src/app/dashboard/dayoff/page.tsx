@@ -11,22 +11,16 @@ interface DayOff {
   user: { name: string };
 }
 
-const DAY_OFF_TYPES = ["", "休み", "有給", "午前休", "午後休", "特別休暇"];
+const DAY_OFF_TYPES = ["", "休み", "午前休"];
 
 const TYPE_COLORS: Record<string, string> = {
   "休み": "bg-red-100 text-red-700",
-  "有給": "bg-blue-100 text-blue-700",
   "午前休": "bg-yellow-100 text-yellow-700",
-  "午後休": "bg-orange-100 text-orange-700",
-  "特別休暇": "bg-purple-100 text-purple-700",
 };
 
 const TYPE_DOT_COLORS: Record<string, string> = {
   "休み": "bg-red-400",
-  "有給": "bg-blue-400",
   "午前休": "bg-yellow-400",
-  "午後休": "bg-orange-400",
-  "特別休暇": "bg-purple-400",
 };
 
 function getDaysInMonth(year: number, month: number) {
@@ -111,7 +105,7 @@ export default function DayOffPage() {
     <div className="max-w-5xl mx-auto space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-gray-800">みんなのお休み</h1>
-        <p className="text-gray-500 mt-1">自分の休みを登録し、みんなの��みを確認できます</p>
+        <p className="text-gray-500 mt-1">自分の休みを登録し、みんなの休みを確認できます</p>
       </div>
 
       {/* Month Navigation */}
