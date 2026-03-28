@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import SessionProvider from "@/components/SessionProvider";
+import MobileBlock from "@/components/MobileBlock";
 
 export const metadata: Metadata = {
   title: "株式会社FRED 勤怠管理システム",
@@ -15,7 +16,9 @@ export default function RootLayout({
   return (
     <html lang="ja" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
-        <SessionProvider>{children}</SessionProvider>
+        <SessionProvider>
+          <MobileBlock>{children}</MobileBlock>
+        </SessionProvider>
       </body>
     </html>
   );
