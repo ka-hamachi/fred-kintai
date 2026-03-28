@@ -9,6 +9,7 @@ interface User {
   name: string;
   email: string;
   role: string;
+  overtimeBalance: number;
 }
 
 interface Attendance {
@@ -40,9 +41,21 @@ function formatTime(dateStr: string | null) {
 
 function formatDuration(minutes: number | null) {
   if (minutes === null || minutes === undefined) return "--:--";
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
+  const h = Math.floor(Math.abs(minutes) / 60);
+  const m = Math.abs(minutes) % 60;
   return `${h}:${String(m).padStart(2, "0")}`;
+}
+
+function formatDurationLong(minutes: number | null) {
+  if (minutes === null || minutes === undefined) return "--:--";
+  const h = Math.floor(Math.abs(minutes) / 60);
+  const m = Math.abs(minutes) % 60;
+  const sign = minutes < 0 ? "-" : "";
+  return `${sign}${h}時間${String(m).padStart(2, "0")}分`;
+}
+
+function getDaysInMonth(year: number, month: number) {
+  return new Date(year, month, 0).getDate();
 }
 
 export default function ModifyPage() {
@@ -325,6 +338,82 @@ export default function ModifyPage() {
           </div>
         </div>
       )}
+
+      {/* Stats Cards */}
+      {selectedUserId && (() => {
+        const selectedUser = users.find((u) => u.id === selectedUserId);
+        const [year, monthStr] = selectedMonth.split("-").map(Number);
+        const totalWorkDays = records.filter((a) => a.clockIn).length;
+        const totalWorkMinutes = records.reduce((sum, a) => sum + (a.workDuration || 0), 0);
+        const daysInMonth = getDaysInMonth(year, monthStr);
+        const requiredWorkMinutes = (daysInMonth - 8) * 10 * 60;
+        const remainingWorkMinutes = requiredWorkMinutes - totalWorkMinutes;
+        const overtimeBalance = selectedUser?.overtimeBalance || 0;
+
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">今月の出勤日数</p>
+                  <p className="text-xl font-bold text-gray-800">{totalWorkDays}日</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">今月の総労働時間</p>
+                  <p className="text-xl font-bold text-gray-800">{formatDurationLong(totalWorkMinutes)}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
+                  <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">今月の残り勤務時間</p>
+                  <p className="text-xl font-bold text-gray-800">
+                    {remainingWorkMinutes <= 0 ? "0時間00分" : formatDurationLong(remainingWorkMinutes)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${overtimeBalance >= 0 ? "bg-green-50" : "bg-red-50"}`}>
+                  <svg className={`w-5 h-5 ${overtimeBalance >= 0 ? "text-green-600" : "text-red-600"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">先月までの過不足</p>
+                  <p className={`text-xl font-bold ${overtimeBalance > 0 ? "text-green-600" : overtimeBalance < 0 ? "text-red-600" : "text-gray-800"}`}>
+                    {overtimeBalance === 0 ? "±0" : overtimeBalance > 0 ? `+${formatDurationLong(overtimeBalance)}` : formatDurationLong(overtimeBalance)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Edit Modal */}
       {editingRecord && (
