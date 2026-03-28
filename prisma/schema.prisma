@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      String   @default("employee") // "admin" or "employee"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  attendances Attendance[]
+}
+
+model Attendance {
+  id             String    @id @default(cuid())
+  userId         String
+  date           String    // YYYY-MM-DD
+  clockIn        DateTime?
+  clockOut       DateTime?
+  breakStart     DateTime?
+  breakEnd       DateTime?
+  workDuration   Int?      // minutes
+  breakDuration  Int?      // minutes
+  note           String?
+  modifiedBy     String?   // admin who modified
+  modifiedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+}
