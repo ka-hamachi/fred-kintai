@@ -53,9 +53,14 @@ export async function POST() {
     0
   );
 
-  // 前月の規定労働時間: (前月の日数 - 8) × 10時間
+  // 前月の規定労働時間: (前月の日数 - 土日数) × 9.5時間
   const daysInPrevMonth = new Date(prevYear, prevMonthNum, 0).getDate();
-  const requiredMinutes = (daysInPrevMonth - 8) * 10 * 60;
+  let weekendDays = 0;
+  for (let d = 1; d <= daysInPrevMonth; d++) {
+    const day = new Date(prevYear, prevMonthNum - 1, d).getDay();
+    if (day === 0 || day === 6) weekendDays++;
+  }
+  const requiredMinutes = (daysInPrevMonth - weekendDays) * 9.5 * 60;
 
   // 過不足 = 実績 - 規定
   const diff = totalWorkMinutes - requiredMinutes;

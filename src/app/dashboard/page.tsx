@@ -33,6 +33,16 @@ function getDaysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate();
 }
 
+function getWeekendDays(year: number, month: number) {
+  const days = getDaysInMonth(year, month);
+  let weekends = 0;
+  for (let d = 1; d <= days; d++) {
+    const day = new Date(year, month - 1, d).getDay();
+    if (day === 0 || day === 6) weekends++;
+  }
+  return weekends;
+}
+
 function getGreeting() {
   const hour = new Date().getHours();
   if (hour < 12) return "おはようございます";
@@ -104,7 +114,8 @@ export default function DashboardPage() {
   // 今月の規定労働時間: (その月の日数 - 8日) × 10時間
   const now = new Date();
   const daysInMonth = getDaysInMonth(now.getFullYear(), now.getMonth() + 1);
-  const requiredWorkMinutes = (daysInMonth - 8) * 10 * 60; // 分単位
+  const weekendDays = getWeekendDays(now.getFullYear(), now.getMonth() + 1);
+  const requiredWorkMinutes = (daysInMonth - weekendDays) * 9.5 * 60; // 分単位
   const remainingWorkMinutes = requiredWorkMinutes - totalWorkMinutes;
 
   return (

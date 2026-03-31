@@ -58,6 +58,16 @@ function getDaysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate();
 }
 
+function getWeekendDays(year: number, month: number) {
+  const days = getDaysInMonth(year, month);
+  let weekends = 0;
+  for (let d = 1; d <= days; d++) {
+    const day = new Date(year, month - 1, d).getDay();
+    if (day === 0 || day === 6) weekends++;
+  }
+  return weekends;
+}
+
 export default function ModifyPage() {
   const { data: session } = useSession();
   const router = useRouter();
@@ -346,7 +356,8 @@ export default function ModifyPage() {
         const totalWorkDays = records.filter((a) => a.clockIn).length;
         const totalWorkMinutes = records.reduce((sum, a) => sum + (a.workDuration || 0), 0);
         const daysInMonth = getDaysInMonth(year, monthStr);
-        const requiredWorkMinutes = (daysInMonth - 8) * 10 * 60;
+        const weekendDays = getWeekendDays(year, monthStr);
+        const requiredWorkMinutes = (daysInMonth - weekendDays) * 9.5 * 60;
         const remainingWorkMinutes = requiredWorkMinutes - totalWorkMinutes;
         const overtimeBalance = selectedUser?.overtimeBalance || 0;
 
