@@ -29,9 +29,17 @@ interface Attendance {
 function toLocalDatetimeValue(dateStr: string | null) {
   if (!dateStr) return "";
   const d = new Date(dateStr);
-  const offset = d.getTimezoneOffset();
-  const local = new Date(d.getTime() - offset * 60000);
-  return local.toISOString().slice(0, 16);
+  // JSTで表示 (UTC+9)
+  const jst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  return jst.toISOString().slice(0, 16);
+}
+
+// datetime-local の値(JST)をISO文字列(UTC)に変換
+function toUTCFromJST(localValue: string | null): string | null {
+  if (!localValue) return null;
+  // datetime-local は "2026-04-01T09:00" 形式(JSTとして扱う)
+  const jstDate = new Date(localValue + ":00+09:00");
+  return jstDate.toISOString();
 }
 
 function formatTime(dateStr: string | null) {
@@ -149,10 +157,10 @@ export default function ModifyPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           attendanceId: editingRecord.id,
-          clockIn: formData.clockIn || null,
-          clockOut: formData.clockOut || null,
-          breakStart: formData.breakStart || null,
-          breakEnd: formData.breakEnd || null,
+          clockIn: toUTCFromJST(formData.clockIn || null),
+          clockOut: toUTCFromJST(formData.clockOut || null),
+          breakStart: toUTCFromJST(formData.breakStart || null),
+          breakEnd: toUTCFromJST(formData.breakEnd || null),
           note: formData.note || null,
         }),
       });
@@ -184,10 +192,10 @@ export default function ModifyPage() {
         body: JSON.stringify({
           userId: selectedUserId,
           date: newDate,
-          clockIn: newFormData.clockIn || null,
-          clockOut: newFormData.clockOut || null,
-          breakStart: newFormData.breakStart || null,
-          breakEnd: newFormData.breakEnd || null,
+          clockIn: toUTCFromJST(newFormData.clockIn || null),
+          clockOut: toUTCFromJST(newFormData.clockOut || null),
+          breakStart: toUTCFromJST(newFormData.breakStart || null),
+          breakEnd: toUTCFromJST(newFormData.breakEnd || null),
           note: newFormData.note || null,
         }),
       });
