@@ -12,10 +12,10 @@ export async function POST() {
   }
 
   const userId = session.user.id;
-  const now = new Date();
+  const now = new Date(Date.now() + 9 * 60 * 60 * 1000); // JST
 
   // 前月の年月を計算
-  const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevMonth = new Date(now.getUTCFullYear(), now.getUTCMonth() - 1, 1);
   const prevYear = prevMonth.getFullYear();
   const prevMonthNum = prevMonth.getMonth() + 1;
   const prevMonthStr = `${prevYear}-${String(prevMonthNum).padStart(2, "0")}`;

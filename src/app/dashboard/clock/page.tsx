@@ -41,7 +41,8 @@ export default function ClockPage() {
   }, []);
 
   const fetchToday = async () => {
-    const today = new Date().toISOString().split("T")[0];
+    const jst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const today = `${jst.getUTCFullYear()}-${String(jst.getUTCMonth() + 1).padStart(2, "0")}-${String(jst.getUTCDate()).padStart(2, "0")}`;
     const res = await fetch(`/api/attendance?date=${today}`);
     if (res.ok) {
       const data = await res.json();
