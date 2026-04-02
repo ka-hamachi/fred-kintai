@@ -30,14 +30,15 @@ export async function PUT(req: NextRequest) {
     );
   }
 
-  // Calculate durations
-  let workDuration = existing.workDuration;
-  let breakDuration = existing.breakDuration;
+  // undefined = フィールド未送信(既存値維持), null = 明示的にクリア
+  const newClockIn = clockIn === undefined ? existing.clockIn : clockIn ? new Date(clockIn) : null;
+  const newClockOut = clockOut === undefined ? existing.clockOut : clockOut ? new Date(clockOut) : null;
+  const newBreakStart = breakStart === undefined ? existing.breakStart : breakStart ? new Date(breakStart) : null;
+  const newBreakEnd = breakEnd === undefined ? existing.breakEnd : breakEnd ? new Date(breakEnd) : null;
 
-  const newClockIn = clockIn ? new Date(clockIn) : existing.clockIn;
-  const newClockOut = clockOut ? new Date(clockOut) : existing.clockOut;
-  const newBreakStart = breakStart ? new Date(breakStart) : existing.breakStart;
-  const newBreakEnd = breakEnd ? new Date(breakEnd) : existing.breakEnd;
+  // Calculate durations
+  let breakDuration: number | null = null;
+  let workDuration: number | null = null;
 
   if (newBreakStart && newBreakEnd) {
     breakDuration = Math.round(
