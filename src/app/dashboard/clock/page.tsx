@@ -7,8 +7,6 @@ interface Attendance {
   date: string;
   clockIn: string | null;
   clockOut: string | null;
-  breakStart: string | null;
-  breakEnd: string | null;
   breakDuration: number | null;
   workDuration: number | null;
 }
@@ -25,11 +23,21 @@ function formatDuration(minutes: number | null) {
   return `${h}時間${String(m).padStart(2, "0")}分`;
 }
 
+// 10分刻みで10〜300分の選択肢を生成
+function getBreakOptions() {
+  const options: number[] = [0];
+  for (let m = 10; m <= 300; m += 10) {
+    options.push(m);
+  }
+  return options;
+}
+
 export default function ClockPage() {
   const [attendance, setAttendance] = useState<Attendance | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [loading, setLoading] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [savingBreak, setSavingBreak] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -70,8 +78,6 @@ export default function ClockPage() {
         const messages: Record<string, string> = {
           clockIn: "出勤を記録しました",
           clockOut: "退勤を記録しました",
-          breakStart: "休憩開始を記録しました",
-          breakEnd: "休憩終了を記録しました",
         };
         setMessage({ type: "success", text: messages[action] });
       }
@@ -82,14 +88,34 @@ export default function ClockPage() {
     setLoading(null);
   };
 
+  const handleBreakChange = async (minutes: number) => {
+    if (!attendance?.id) return;
+    setSavingBreak(true);
+
+    try {
+      const res = await fetch("/api/attendance/break", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attendanceId: attendance.id, breakDuration: minutes }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setAttendance(data);
+        setMessage({ type: "success", text: `休憩時間を${minutes}分に設定しました` });
+      }
+    } catch {
+      setMessage({ type: "error", text: "エラーが発生しました" });
+    }
+
+    setSavingBreak(false);
+  };
+
   const canClockIn = !attendance?.clockIn;
-  const canClockOut = !!attendance?.clockIn && !attendance?.clockOut && !(attendance?.breakStart && !attendance?.breakEnd);
-  const canBreakStart = !!attendance?.clockIn && !attendance?.clockOut && !(attendance?.breakStart && !attendance?.breakEnd);
-  const canBreakEnd = !!attendance?.breakStart && !attendance?.breakEnd;
+  const canClockOut = !!attendance?.clockIn && !attendance?.clockOut;
 
   const getStatusInfo = () => {
     if (!attendance?.clockIn) return { text: "未出勤", bg: "bg-gray-50", border: "border-gray-200", dot: "bg-gray-400" };
-    if (attendance.breakStart && !attendance.breakEnd) return { text: "休憩中", bg: "bg-yellow-50", border: "border-yellow-200", dot: "bg-yellow-400" };
     if (attendance.clockOut) return { text: "退勤済", bg: "bg-green-50", border: "border-green-200", dot: "bg-green-400" };
     return { text: "勤務中", bg: "bg-blue-50", border: "border-blue-200", dot: "bg-blue-400" };
   };
@@ -139,7 +165,7 @@ export default function ClockPage() {
         </div>
       )}
 
-      {/* Action Buttons */}
+      {/* Action Buttons - 出勤・退勤のみ */}
       <div className="grid grid-cols-2 gap-4">
         <button
           onClick={() => handleAction("clockIn")}
@@ -184,51 +210,6 @@ export default function ClockPage() {
             </div>
           )}
         </button>
-
-        <button
-          onClick={() => handleAction("breakStart")}
-          disabled={!canBreakStart || loading !== null}
-          className="relative flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border-2 border-yellow-200 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 hover:border-yellow-300 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-yellow-50 disabled:hover:border-yellow-200"
-        >
-          <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span className="text-lg font-bold">休憩開始</span>
-          {attendance?.breakStart && (
-            <span className="text-xs text-yellow-600">{formatTime(attendance.breakStart)}</span>
-          )}
-          {loading === "breakStart" && (
-            <div className="absolute inset-0 flex items-center justify-center bg-yellow-50/80 rounded-2xl">
-              <svg className="animate-spin w-6 h-6 text-yellow-600" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-            </div>
-          )}
-        </button>
-
-        <button
-          onClick={() => handleAction("breakEnd")}
-          disabled={!canBreakEnd || loading !== null}
-          className="relative flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border-2 border-green-200 bg-green-50 text-green-700 hover:bg-green-100 hover:border-green-300 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-green-50 disabled:hover:border-green-200"
-        >
-          <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span className="text-lg font-bold">休憩終了</span>
-          {attendance?.breakEnd && (
-            <span className="text-xs text-green-600">{formatTime(attendance.breakEnd)}</span>
-          )}
-          {loading === "breakEnd" && (
-            <div className="absolute inset-0 flex items-center justify-center bg-green-50/80 rounded-2xl">
-              <svg className="animate-spin w-6 h-6 text-green-600" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-            </div>
-          )}
-        </button>
       </div>
 
       {/* Today's Summary */}
@@ -246,7 +227,18 @@ export default function ClockPage() {
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="text-xs text-gray-400 mb-1">休憩時間</p>
-              <p className="text-lg font-medium text-gray-700">{formatDuration(attendance.breakDuration)}</p>
+              <select
+                value={attendance.breakDuration || 0}
+                onChange={(e) => handleBreakChange(Number(e.target.value))}
+                disabled={savingBreak}
+                className={`text-lg font-medium text-gray-700 bg-transparent outline-none cursor-pointer ${savingBreak ? "opacity-50" : ""}`}
+              >
+                {getBreakOptions().map((m) => (
+                  <option key={m} value={m}>
+                    {m === 0 ? "なし" : `${m}分`}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="text-xs text-gray-400 mb-1">勤務時間</p>

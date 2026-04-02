@@ -34,6 +34,14 @@ function formatDuration(minutes: number | null) {
   return `${h}:${String(m).padStart(2, "0")}`;
 }
 
+function getBreakOptions() {
+  const options: number[] = [0];
+  for (let m = 10; m <= 300; m += 10) {
+    options.push(m);
+  }
+  return options;
+}
+
 export default function HistoryPage() {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "admin";
@@ -44,6 +52,7 @@ export default function HistoryPage() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
+  const [savingBreakId, setSavingBreakId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isAdmin) {
@@ -66,6 +75,26 @@ export default function HistoryPage() {
       setRecords(data);
     }
   };
+
+  const handleBreakChange = async (attendanceId: string, minutes: number) => {
+    setSavingBreakId(attendanceId);
+    try {
+      const res = await fetch("/api/attendance/break", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attendanceId, breakDuration: minutes }),
+      });
+      if (res.ok) {
+        fetchRecords();
+      }
+    } catch {
+      // ignore
+    }
+    setSavingBreakId(null);
+  };
+
+  // 自分の記録を見ている場合のみ休憩編集可能
+  const canEditBreak = !selectedUserId || isAdmin;
 
   const totalWorkMinutes = records.reduce((sum, r) => sum + (r.workDuration || 0), 0);
   const totalBreakMinutes = records.reduce((sum, r) => sum + (r.breakDuration || 0), 0);
@@ -154,7 +183,24 @@ export default function HistoryPage() {
                   )}
                   <td className="px-6 py-4 text-sm text-gray-600">{formatTime(record.clockIn)}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{formatTime(record.clockOut)}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{formatDuration(record.breakDuration)}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">
+                    {canEditBreak ? (
+                      <select
+                        value={record.breakDuration || 0}
+                        onChange={(e) => handleBreakChange(record.id, Number(e.target.value))}
+                        disabled={savingBreakId === record.id}
+                        className={`bg-transparent outline-none cursor-pointer text-sm ${savingBreakId === record.id ? "opacity-50" : ""}`}
+                      >
+                        {getBreakOptions().map((m) => (
+                          <option key={m} value={m}>
+                            {m === 0 ? "0:00" : formatDuration(m)}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      formatDuration(record.breakDuration)
+                    )}
+                  </td>
                   <td className="px-6 py-4 text-sm font-medium text-gray-700">{formatDuration(record.workDuration)}</td>
                   <td className="px-6 py-4 text-sm text-gray-400">
                     {record.modifiedBy && (
