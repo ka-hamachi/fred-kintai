@@ -10,7 +10,7 @@ export async function PUT(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { attendanceId, clockIn, clockOut, breakStart, breakEnd, note } = body;
+  const { attendanceId, clockIn, clockOut, breakDuration: bodyBreakDuration, note } = body;
 
   if (!attendanceId) {
     return NextResponse.json(
@@ -33,19 +33,10 @@ export async function PUT(req: NextRequest) {
   // undefined = フィールド未送信(既存値維持), null = 明示的にクリア
   const newClockIn = clockIn === undefined ? existing.clockIn : clockIn ? new Date(clockIn) : null;
   const newClockOut = clockOut === undefined ? existing.clockOut : clockOut ? new Date(clockOut) : null;
-  const newBreakStart = breakStart === undefined ? existing.breakStart : breakStart ? new Date(breakStart) : null;
-  const newBreakEnd = breakEnd === undefined ? existing.breakEnd : breakEnd ? new Date(breakEnd) : null;
+  const breakDuration = bodyBreakDuration !== undefined ? bodyBreakDuration : existing.breakDuration;
 
-  // Calculate durations
-  let breakDuration: number | null = null;
+  // Calculate work duration
   let workDuration: number | null = null;
-
-  if (newBreakStart && newBreakEnd) {
-    breakDuration = Math.round(
-      (newBreakEnd.getTime() - newBreakStart.getTime()) / 60000
-    );
-  }
-
   if (newClockIn && newClockOut) {
     workDuration =
       Math.round((newClockOut.getTime() - newClockIn.getTime()) / 60000) -
@@ -57,8 +48,6 @@ export async function PUT(req: NextRequest) {
     data: {
       clockIn: newClockIn,
       clockOut: newClockOut,
-      breakStart: newBreakStart,
-      breakEnd: newBreakEnd,
       workDuration,
       breakDuration,
       note: note || existing.note,
@@ -78,7 +67,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { userId, date, clockIn, clockOut, breakStart, breakEnd, note } = body;
+  const { userId, date, clockIn, clockOut, breakDuration: bodyBreakDuration, note } = body;
 
   if (!userId || !date) {
     return NextResponse.json(
@@ -88,20 +77,15 @@ export async function POST(req: NextRequest) {
   }
 
   let workDuration: number | null = null;
-  let breakDuration: number | null = null;
+  const breakDuration = bodyBreakDuration || 0;
 
   const ciDate = clockIn ? new Date(clockIn) : null;
   const coDate = clockOut ? new Date(clockOut) : null;
-  const bsDate = breakStart ? new Date(breakStart) : null;
-  const beDate = breakEnd ? new Date(breakEnd) : null;
 
-  if (bsDate && beDate) {
-    breakDuration = Math.round((beDate.getTime() - bsDate.getTime()) / 60000);
-  }
   if (ciDate && coDate) {
     workDuration =
       Math.round((coDate.getTime() - ciDate.getTime()) / 60000) -
-      (breakDuration || 0);
+      breakDuration;
   }
 
   const attendance = await prisma.attendance.upsert({
@@ -109,8 +93,6 @@ export async function POST(req: NextRequest) {
     update: {
       clockIn: ciDate,
       clockOut: coDate,
-      breakStart: bsDate,
-      breakEnd: beDate,
       workDuration,
       breakDuration,
       note,
@@ -122,8 +104,6 @@ export async function POST(req: NextRequest) {
       date,
       clockIn: ciDate,
       clockOut: coDate,
-      breakStart: bsDate,
-      breakEnd: beDate,
       workDuration,
       breakDuration,
       note,

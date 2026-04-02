@@ -66,6 +66,14 @@ function getDaysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate();
 }
 
+function getBreakOptions() {
+  const options: number[] = [0];
+  for (let m = 10; m <= 300; m += 10) {
+    options.push(m);
+  }
+  return options;
+}
+
 function getWeekendDays(year: number, month: number) {
   const days = getDaysInMonth(year, month);
   let weekends = 0;
@@ -92,12 +100,12 @@ export default function ModifyPage() {
   const [formData, setFormData] = useState({
     clockIn: "",
     clockOut: "",
-    breakStart: "",
-    breakEnd: "",
+    breakDuration: 0,
     note: "",
   });
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [savingBreakId, setSavingBreakId] = useState<string | null>(null);
 
   // New record state
   const [showNewForm, setShowNewForm] = useState(false);
@@ -105,8 +113,7 @@ export default function ModifyPage() {
   const [newFormData, setNewFormData] = useState({
     clockIn: "",
     clockOut: "",
-    breakStart: "",
-    breakEnd: "",
+    breakDuration: 0,
     note: "",
   });
 
@@ -139,8 +146,7 @@ export default function ModifyPage() {
     setFormData({
       clockIn: toLocalDatetimeValue(record.clockIn),
       clockOut: toLocalDatetimeValue(record.clockOut),
-      breakStart: toLocalDatetimeValue(record.breakStart),
-      breakEnd: toLocalDatetimeValue(record.breakEnd),
+      breakDuration: record.breakDuration || 0,
       note: record.note || "",
     });
     setMessage(null);
@@ -159,8 +165,7 @@ export default function ModifyPage() {
           attendanceId: editingRecord.id,
           clockIn: toUTCFromJST(formData.clockIn || null),
           clockOut: toUTCFromJST(formData.clockOut || null),
-          breakStart: toUTCFromJST(formData.breakStart || null),
-          breakEnd: toUTCFromJST(formData.breakEnd || null),
+          breakDuration: formData.breakDuration,
           note: formData.note || null,
         }),
       });
@@ -194,8 +199,7 @@ export default function ModifyPage() {
           date: newDate,
           clockIn: toUTCFromJST(newFormData.clockIn || null),
           clockOut: toUTCFromJST(newFormData.clockOut || null),
-          breakStart: toUTCFromJST(newFormData.breakStart || null),
-          breakEnd: toUTCFromJST(newFormData.breakEnd || null),
+          breakDuration: newFormData.breakDuration,
           note: newFormData.note || null,
         }),
       });
@@ -204,7 +208,7 @@ export default function ModifyPage() {
         setMessage({ type: "success", text: "勤怠記録を追加しました" });
         setShowNewForm(false);
         setNewDate("");
-        setNewFormData({ clockIn: "", clockOut: "", breakStart: "", breakEnd: "", note: "" });
+        setNewFormData({ clockIn: "", clockOut: "", breakDuration: 0, note: "" });
         fetchRecords();
       } else {
         const data = await res.json();
@@ -215,6 +219,23 @@ export default function ModifyPage() {
     }
 
     setSaving(false);
+  };
+
+  const handleBreakChange = async (attendanceId: string, minutes: number) => {
+    setSavingBreakId(attendanceId);
+    try {
+      const res = await fetch("/api/attendance/break", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attendanceId, breakDuration: minutes }),
+      });
+      if (res.ok) {
+        fetchRecords();
+      }
+    } catch {
+      // ignore
+    }
+    setSavingBreakId(null);
   };
 
   if (!isAdmin) return null;
@@ -311,22 +332,18 @@ export default function ModifyPage() {
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">休憩開始</label>
-              <input
-                type="datetime-local"
-                value={newFormData.breakStart}
-                onChange={(e) => setNewFormData({ ...newFormData, breakStart: e.target.value })}
+              <label className="block text-xs text-gray-400 mb-1">休憩時間</label>
+              <select
+                value={newFormData.breakDuration}
+                onChange={(e) => setNewFormData({ ...newFormData, breakDuration: Number(e.target.value) })}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-400 mb-1">休憩終了</label>
-              <input
-                type="datetime-local"
-                value={newFormData.breakEnd}
-                onChange={(e) => setNewFormData({ ...newFormData, breakEnd: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              />
+              >
+                {getBreakOptions().map((m) => (
+                  <option key={m} value={m}>
+                    {m === 0 ? "なし" : `${m}分`}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-xs text-gray-400 mb-1">備考</label>
@@ -469,23 +486,19 @@ export default function ModifyPage() {
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">休憩開始</label>
-                  <input
-                    type="datetime-local"
-                    value={formData.breakStart}
-                    onChange={(e) => setFormData({ ...formData, breakStart: e.target.value })}
+                <div className="col-span-2">
+                  <label className="block text-xs text-gray-400 mb-1">休憩時間</label>
+                  <select
+                    value={formData.breakDuration}
+                    onChange={(e) => setFormData({ ...formData, breakDuration: Number(e.target.value) })}
                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">休憩終了</label>
-                  <input
-                    type="datetime-local"
-                    value={formData.breakEnd}
-                    onChange={(e) => setFormData({ ...formData, breakEnd: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  />
+                  >
+                    {getBreakOptions().map((m) => (
+                      <option key={m} value={m}>
+                        {m === 0 ? "なし" : `${m}分`}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div>
@@ -547,7 +560,20 @@ export default function ModifyPage() {
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">{formatTime(record.clockIn)}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{formatTime(record.clockOut)}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{formatDuration(record.breakDuration)}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">
+                      <select
+                        value={record.breakDuration || 0}
+                        onChange={(e) => handleBreakChange(record.id, Number(e.target.value))}
+                        disabled={savingBreakId === record.id}
+                        className={`bg-transparent outline-none cursor-pointer text-sm ${savingBreakId === record.id ? "opacity-50" : ""}`}
+                      >
+                        {getBreakOptions().map((m) => (
+                          <option key={m} value={m}>
+                            {m === 0 ? "0:00" : formatDuration(m)}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
                     <td className="px-6 py-4 text-sm font-medium text-gray-700">{formatDuration(record.workDuration)}</td>
                     <td className="px-6 py-4 text-sm text-gray-400">{record.modifiedBy || "-"}</td>
                     <td className="px-6 py-4">
