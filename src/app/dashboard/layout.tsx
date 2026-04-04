@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useEffect } from "react";
 import Sidebar from "@/components/Sidebar";
 
@@ -12,6 +12,8 @@ export default function DashboardLayout({
 }) {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const pathname = usePathname();
+  const isDayOffPage = pathname.startsWith("/dashboard/dayoff");
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -34,6 +36,18 @@ export default function DashboardLayout({
   }
 
   if (!session) return null;
+
+  // スマホでお休みページの場合はサイドバーなし
+  if (isDayOffPage) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <div className="hidden md:block">
+          <Sidebar />
+        </div>
+        <main className="flex-1 p-4 md:p-8 overflow-auto">{children}</main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">

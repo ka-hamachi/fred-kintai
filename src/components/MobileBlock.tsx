@@ -1,6 +1,20 @@
 "use client";
 
+import { usePathname } from "next/navigation";
+
+// スマホでもアクセスを許可するパス
+const MOBILE_ALLOWED_PATHS = ["/login", "/dashboard/dayoff"];
+
 export default function MobileBlock({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isMobileAllowed = MOBILE_ALLOWED_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(p + "/")
+  );
+
+  if (isMobileAllowed) {
+    return <>{children}</>;
+  }
+
   return (
     <>
       {/* PC: 通常表示 */}

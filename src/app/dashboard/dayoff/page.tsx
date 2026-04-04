@@ -102,7 +102,7 @@ export default function DayOffPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="max-w-5xl mx-auto space-y-6 md:space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-gray-800">みんなのお休み</h1>
         <p className="text-gray-500 mt-1">自分の休みを登録し、みんなの休みを確認できます</p>
@@ -136,8 +136,8 @@ export default function DayOffPage() {
       </div>
 
       {/* 自分の休み */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">自分の休み</h3>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 md:p-6">
+        <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-3 md:mb-4">自分の休み</h3>
         <div className="grid grid-cols-7 gap-px bg-gray-200 rounded-lg overflow-hidden">
           {/* Weekday headers */}
           {WEEKDAYS.map((day, i) => (
@@ -153,7 +153,7 @@ export default function DayOffPage() {
           {/* Calendar cells */}
           {calendarDays.map((day, idx) => {
             if (day === null) {
-              return <div key={`empty-${idx}`} className="bg-gray-50 min-h-[70px]"></div>;
+              return <div key={`empty-${idx}`} className="bg-gray-50 min-h-[56px] md:min-h-[70px]"></div>;
             }
             const dateStr = `${selectedMonth}-${String(day).padStart(2, "0")}`;
             const dayOff = getMyDayOff(dateStr);
@@ -165,7 +165,7 @@ export default function DayOffPage() {
             return (
               <div
                 key={dateStr}
-                className={`bg-white min-h-[70px] p-1.5 ${isToday ? "ring-2 ring-blue-400 ring-inset" : ""}`}
+                className={`bg-white min-h-[56px] md:min-h-[70px] p-1 md:p-1.5 ${isToday ? "ring-2 ring-blue-400 ring-inset" : ""}`}
               >
                 <div className={`text-xs font-medium mb-1 ${
                   isToday ? "text-blue-600" : isSunday ? "text-red-400" : isSaturday ? "text-blue-400" : "text-gray-600"
@@ -192,8 +192,8 @@ export default function DayOffPage() {
       </div>
 
       {/* みんなの休み */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">みんなの休み</h3>
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3 md:p-6">
+        <h3 className="text-base md:text-lg font-semibold text-gray-800 mb-3 md:mb-4">みんなの休み</h3>
         <div className="grid grid-cols-7 gap-px bg-gray-200 rounded-lg overflow-hidden">
           {/* Weekday headers */}
           {WEEKDAYS.map((day, i) => (
@@ -209,7 +209,7 @@ export default function DayOffPage() {
           {/* Calendar cells */}
           {calendarDays.map((day, idx) => {
             if (day === null) {
-              return <div key={`empty2-${idx}`} className="bg-gray-50 min-h-[80px]"></div>;
+              return <div key={`empty2-${idx}`} className="bg-gray-50 min-h-[60px] md:min-h-[80px]"></div>;
             }
             const dateStr = `${selectedMonth}-${String(day).padStart(2, "0")}`;
             const dayOffs = getDayOffsForDate(dateStr);
@@ -221,7 +221,7 @@ export default function DayOffPage() {
             return (
               <div
                 key={dateStr}
-                className={`bg-white min-h-[80px] p-1.5 ${isToday ? "ring-2 ring-blue-400 ring-inset" : ""}`}
+                className={`bg-white min-h-[60px] md:min-h-[80px] p-1 md:p-1.5 ${isToday ? "ring-2 ring-blue-400 ring-inset" : ""}`}
               >
                 <div className={`text-xs font-medium mb-1 flex items-center gap-1 ${
                   isToday ? "text-blue-600" : isSunday ? "text-red-400" : isSaturday ? "text-blue-400" : "text-gray-600"

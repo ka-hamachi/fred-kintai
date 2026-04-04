@@ -27,7 +27,9 @@ export default function LoginPage() {
       setError("メールアドレスまたはパスワードが正しくありません");
       setLoading(false);
     } else {
-      router.push("/dashboard");
+      // スマホの場合はお休みページへ
+      const isMobile = window.innerWidth < 768;
+      router.push(isMobile ? "/dashboard/dayoff" : "/dashboard");
     }
   };
 
