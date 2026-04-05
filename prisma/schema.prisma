@@ -17,8 +17,9 @@ model User {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  attendances Attendance[]
-  dayOffs     DayOff[]
+  attendances          Attendance[]
+  dayOffs              DayOff[]
+  correctionRequests   CorrectionRequest[]
 }
 
 model Attendance {
@@ -40,6 +41,24 @@ model Attendance {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
+}
+
+model CorrectionRequest {
+  id               String    @id @default(cuid())
+  userId           String
+  attendanceId     String?
+  date             String    // YYYY-MM-DD
+  requestedClockIn DateTime?
+  requestedClockOut DateTime?
+  requestedBreakDuration Int?
+  reason           String?
+  status           String    @default("pending") // "pending", "approved", "rejected"
+  reviewedBy       String?
+  reviewedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model DayOff {
