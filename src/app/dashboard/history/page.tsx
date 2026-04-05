@@ -203,8 +203,8 @@ export default function HistoryPage() {
 
   // 自分の記録を見ている場合のみ休憩編集可能
   const canEditBreak = !selectedUserId || isAdmin;
-  // 自分の記録を見ている場合のみ修正依頼可能
-  const canRequestCorrection = !selectedUserId && !isAdmin;
+  // 自分の記録を見ている場合に修正依頼可能（管理者含む）
+  const canRequestCorrection = !selectedUserId;
 
   const totalWorkMinutes = records.reduce((sum, r) => sum + (r.workDuration || 0), 0);
   const totalBreakMinutes = records.reduce((sum, r) => sum + (r.breakDuration || 0), 0);
