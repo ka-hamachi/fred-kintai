@@ -354,19 +354,21 @@ export default function ModifyPage() {
       </div>
 
       {/* Correction Requests */}
-      {correctionRequests.length > 0 && (
-        <div className="bg-white rounded-xl border border-blue-100 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-blue-50 bg-blue-50/30">
-            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-              修正依頼
+      <div className="bg-white rounded-xl border border-blue-100 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-blue-50 bg-blue-50/30">
+          <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            修正依頼
+            {correctionRequests.length > 0 && (
               <span className="ml-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
                 {correctionRequests.length}件
               </span>
-            </h3>
-          </div>
+            )}
+          </h3>
+        </div>
+        {correctionRequests.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -430,8 +432,15 @@ export default function ModifyPage() {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="p-16 text-center">
+            <svg className="w-12 h-12 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            <p className="text-gray-400">修正依頼はありません</p>
+          </div>
+        )}
+      </div>
 
       {/* New Record Form */}
       {showNewForm && selectedUserId && (
