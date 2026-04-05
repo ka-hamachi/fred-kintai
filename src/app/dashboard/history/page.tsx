@@ -141,23 +141,20 @@ export default function HistoryPage() {
     setSavingBreakId(null);
   };
 
+  // UTC の ISO 文字列から JST の HH:MM（5分刻みに丸め）を返す
+  const toJSTTimeString = (dateStr: string): string => {
+    const d = new Date(dateStr);
+    const jst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+    const h = jst.getUTCHours();
+    const rawM = jst.getUTCMinutes();
+    const m = Math.round(rawM / 5) * 5;
+    return `${String(h).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+  };
+
   const openCorrectionModal = (record: Attendance) => {
     setCorrectionModal(record);
-    // Pre-fill with current times
-    if (record.clockIn) {
-      const d = new Date(record.clockIn);
-      const jst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
-      setCorrClockIn(`${String(jst.getHours()).padStart(2, "0")}:${String(jst.getMinutes()).padStart(2, "0")}`);
-    } else {
-      setCorrClockIn("");
-    }
-    if (record.clockOut) {
-      const d = new Date(record.clockOut);
-      const jst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
-      setCorrClockOut(`${String(jst.getHours()).padStart(2, "0")}:${String(jst.getMinutes()).padStart(2, "0")}`);
-    } else {
-      setCorrClockOut("");
-    }
+    setCorrClockIn(record.clockIn ? toJSTTimeString(record.clockIn) : "");
+    setCorrClockOut(record.clockOut ? toJSTTimeString(record.clockOut) : "");
     setCorrBreak(record.breakDuration || 0);
     setCorrReason("");
     setCorrMessage(null);
