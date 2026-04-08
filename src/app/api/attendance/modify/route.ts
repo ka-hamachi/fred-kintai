@@ -88,18 +88,8 @@ export async function POST(req: NextRequest) {
       breakDuration;
   }
 
-  const attendance = await prisma.attendance.upsert({
-    where: { userId_date: { userId, date } },
-    update: {
-      clockIn: ciDate,
-      clockOut: coDate,
-      workDuration,
-      breakDuration,
-      note,
-      modifiedBy: session.user.name,
-      modifiedAt: new Date(),
-    },
-    create: {
+  const attendance = await prisma.attendance.create({
+    data: {
       userId,
       date,
       clockIn: ciDate,

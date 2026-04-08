@@ -33,7 +33,7 @@ function getBreakOptions() {
 }
 
 export default function ClockPage() {
-  const [attendance, setAttendance] = useState<Attendance | null>(null);
+  const [activeSession, setActiveSession] = useState<Attendance | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [loading, setLoading] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -45,16 +45,15 @@ export default function ClockPage() {
   }, []);
 
   useEffect(() => {
-    fetchToday();
+    fetchActiveSession();
   }, []);
 
-  const fetchToday = async () => {
-    const jst = new Date(Date.now() + 9 * 60 * 60 * 1000);
-    const today = `${jst.getUTCFullYear()}-${String(jst.getUTCMonth() + 1).padStart(2, "0")}-${String(jst.getUTCDate()).padStart(2, "0")}`;
-    const res = await fetch(`/api/attendance?date=${today}`);
+  const fetchActiveSession = async () => {
+    // Fetch active (un-clocked-out) session
+    const res = await fetch("/api/attendance?active=true");
     if (res.ok) {
       const data = await res.json();
-      setAttendance(data);
+      setActiveSession(data);
     }
   };
 
@@ -74,7 +73,12 @@ export default function ClockPage() {
       if (!res.ok) {
         setMessage({ type: "error", text: data.error });
       } else {
-        setAttendance(data);
+        if (action === "clockOut") {
+          // After clock out, clear active session
+          setActiveSession(null);
+        } else {
+          setActiveSession(data);
+        }
         const messages: Record<string, string> = {
           clockIn: "出勤を記録しました",
           clockOut: "退勤を記録しました",
@@ -89,19 +93,19 @@ export default function ClockPage() {
   };
 
   const handleBreakChange = async (minutes: number) => {
-    if (!attendance?.id) return;
+    if (!activeSession?.id) return;
     setSavingBreak(true);
 
     try {
       const res = await fetch("/api/attendance/break", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attendanceId: attendance.id, breakDuration: minutes }),
+        body: JSON.stringify({ attendanceId: activeSession.id, breakDuration: minutes }),
       });
 
       if (res.ok) {
         const data = await res.json();
-        setAttendance(data);
+        setActiveSession(data);
         setMessage({ type: "success", text: `休憩時間を${minutes}分に設定しました` });
       }
     } catch {
@@ -111,16 +115,24 @@ export default function ClockPage() {
     setSavingBreak(false);
   };
 
-  const canClockIn = !attendance?.clockIn;
-  const canClockOut = !!attendance?.clockIn && !attendance?.clockOut;
+  const canClockIn = !activeSession;
+  const canClockOut = !!activeSession?.clockIn;
 
   const getStatusInfo = () => {
-    if (!attendance?.clockIn) return { text: "未出勤", bg: "bg-gray-50", border: "border-gray-200", dot: "bg-gray-400" };
-    if (attendance.clockOut) return { text: "退勤済", bg: "bg-green-50", border: "border-green-200", dot: "bg-green-400" };
+    if (!activeSession) return { text: "未出勤", bg: "bg-gray-50", border: "border-gray-200", dot: "bg-gray-400" };
+    if (activeSession.clockOut) return { text: "退勤済", bg: "bg-green-50", border: "border-green-200", dot: "bg-green-400" };
     return { text: "勤務中", bg: "bg-blue-50", border: "border-blue-200", dot: "bg-blue-400" };
   };
 
   const statusInfo = getStatusInfo();
+
+  // Check if active session is from a different date than today
+  const isCarryOver = (() => {
+    if (!activeSession?.clockIn) return false;
+    const jst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const today = `${jst.getUTCFullYear()}-${String(jst.getUTCMonth() + 1).padStart(2, "0")}-${String(jst.getUTCDate()).padStart(2, "0")}`;
+    return activeSession.date !== today;
+  })();
 
   return (
     <div className="max-w-2xl mx-auto space-y-8">
@@ -150,6 +162,12 @@ export default function ClockPage() {
           <span className={`w-2 h-2 rounded-full ${statusInfo.dot} animate-pulse`}></span>
           <span className="text-sm font-medium text-gray-600">{statusInfo.text}</span>
         </div>
+        {isCarryOver && (
+          <p className="text-xs text-amber-600 mt-2">
+            {new Date(activeSession!.date + "T00:00:00").toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" })}
+            からの勤務を継続中
+          </p>
+        )}
       </div>
 
       {/* Message */}
@@ -176,9 +194,6 @@ export default function ClockPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
           </svg>
           <span className="text-lg font-bold">出勤</span>
-          {attendance?.clockIn && (
-            <span className="text-xs text-blue-500">{formatTime(attendance.clockIn)}</span>
-          )}
           {loading === "clockIn" && (
             <div className="absolute inset-0 flex items-center justify-center bg-blue-50/80 rounded-2xl">
               <svg className="animate-spin w-6 h-6 text-blue-600" viewBox="0 0 24 24">
@@ -198,9 +213,6 @@ export default function ClockPage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
           </svg>
           <span className="text-lg font-bold">退勤</span>
-          {attendance?.clockOut && (
-            <span className="text-xs text-red-500">{formatTime(attendance.clockOut)}</span>
-          )}
           {loading === "clockOut" && (
             <div className="absolute inset-0 flex items-center justify-center bg-red-50/80 rounded-2xl">
               <svg className="animate-spin w-6 h-6 text-red-600" viewBox="0 0 24 24">
@@ -212,23 +224,27 @@ export default function ClockPage() {
         </button>
       </div>
 
-      {/* Today's Summary */}
-      {attendance?.clockIn && (
+      {/* Active Session Summary */}
+      {activeSession?.clockIn && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">本日の記録</h2>
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">
+            {isCarryOver
+              ? `${new Date(activeSession.date + "T00:00:00").toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" })}からの勤務記録`
+              : "本日の記録"}
+          </h2>
           <div className="grid grid-cols-2 gap-4">
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="text-xs text-gray-400 mb-1">出勤時刻</p>
-              <p className="text-lg font-medium text-gray-700">{formatTime(attendance.clockIn)}</p>
+              <p className="text-lg font-medium text-gray-700">{formatTime(activeSession.clockIn)}</p>
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="text-xs text-gray-400 mb-1">退勤時刻</p>
-              <p className="text-lg font-medium text-gray-700">{formatTime(attendance.clockOut)}</p>
+              <p className="text-lg font-medium text-gray-700">{formatTime(activeSession.clockOut)}</p>
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="text-xs text-gray-400 mb-1">休憩時間</p>
               <select
-                value={attendance.breakDuration || 0}
+                value={activeSession.breakDuration || 0}
                 onChange={(e) => handleBreakChange(Number(e.target.value))}
                 disabled={savingBreak}
                 className={`text-lg font-medium text-gray-700 bg-transparent outline-none cursor-pointer ${savingBreak ? "opacity-50" : ""}`}
@@ -242,7 +258,7 @@ export default function ClockPage() {
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
               <p className="text-xs text-gray-400 mb-1">勤務時間</p>
-              <p className="text-lg font-medium text-gray-700">{formatDuration(attendance.workDuration)}</p>
+              <p className="text-lg font-medium text-gray-700">{formatDuration(activeSession.workDuration)}</p>
             </div>
           </div>
         </div>

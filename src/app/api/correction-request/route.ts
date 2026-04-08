@@ -105,34 +105,35 @@ export async function PUT(req: NextRequest) {
         breakDuration;
     }
 
-    await prisma.attendance.upsert({
-      where: {
-        userId_date: {
+    // If attendanceId is specified, update that specific record; otherwise create new
+    if (correctionReq.attendanceId) {
+      await prisma.attendance.update({
+        where: { id: correctionReq.attendanceId },
+        data: {
+          clockIn: newClockIn,
+          clockOut: newClockOut,
+          breakDuration,
+          workDuration,
+          modifiedBy: session.user.name,
+          modifiedAt: new Date(),
+          note: correctionReq.reason || "修正依頼による修正",
+        },
+      });
+    } else {
+      await prisma.attendance.create({
+        data: {
           userId: correctionReq.userId,
           date: correctionReq.date,
+          clockIn: newClockIn,
+          clockOut: newClockOut,
+          breakDuration,
+          workDuration,
+          modifiedBy: session.user.name,
+          modifiedAt: new Date(),
+          note: correctionReq.reason || "修正依頼による修正",
         },
-      },
-      update: {
-        clockIn: newClockIn,
-        clockOut: newClockOut,
-        breakDuration,
-        workDuration,
-        modifiedBy: session.user.name,
-        modifiedAt: new Date(),
-        note: correctionReq.reason || "修正依頼による修正",
-      },
-      create: {
-        userId: correctionReq.userId,
-        date: correctionReq.date,
-        clockIn: newClockIn,
-        clockOut: newClockOut,
-        breakDuration,
-        workDuration,
-        modifiedBy: session.user.name,
-        modifiedAt: new Date(),
-        note: correctionReq.reason || "修正依頼による修正",
-      },
-    });
+      });
+    }
   }
 
   const updated = await prisma.correctionRequest.update({
