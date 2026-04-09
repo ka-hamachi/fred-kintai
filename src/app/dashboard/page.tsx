@@ -49,19 +49,12 @@ function getGreeting() {
   return "お疲れ様です";
 }
 
-interface RankingEntry {
-  id: string;
-  name: string;
-  totalMinutes: number;
-}
-
 export default function DashboardPage() {
   const { data: session } = useSession();
   const [todayAttendance, setTodayAttendance] = useState<Attendance | null>(null);
   const [monthlyData, setMonthlyData] = useState<Attendance[]>([]);
   const [overtimeBalance, setOvertimeBalance] = useState<number>(0);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [ranking, setRanking] = useState<RankingEntry[]>([]);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -75,7 +68,6 @@ export default function DashboardPage() {
       fetchTodayData();
       fetchMonthlyData();
       fetchOvertimeBalance();
-      fetchRanking();
     };
     init();
   }, []);
@@ -105,16 +97,6 @@ export default function DashboardPage() {
     if (res.ok) {
       const data = await res.json();
       setOvertimeBalance(data?.overtimeBalance || 0);
-    }
-  };
-
-  const fetchRanking = async () => {
-    const now = new Date();
-    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    const res = await fetch(`/api/attendance/ranking?month=${month}`);
-    if (res.ok) {
-      const data = await res.json();
-      setRanking(data);
     }
   };
 
@@ -311,52 +293,6 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Monthly Ranking */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
-        <div className="p-6 border-b border-gray-50">
-          <h2 className="text-lg font-semibold text-gray-800">今月の勤怠ランキング</h2>
-          <p className="text-xs text-gray-400 mt-1">全メンバーの総労働時間ランキング</p>
-        </div>
-        <div className="divide-y divide-gray-50">
-          {ranking.map((entry, index) => {
-            const rank = index + 1;
-            const isMe = entry.id === session?.user?.id;
-            const medal =
-              rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : null;
-
-            return (
-              <div
-                key={entry.id}
-                className={`flex items-center gap-4 px-6 py-4 ${isMe ? "bg-blue-50/50" : "hover:bg-gray-50/50"}`}
-              >
-                <div className="w-8 text-center">
-                  {medal ? (
-                    <span className="text-xl">{medal}</span>
-                  ) : (
-                    <span className="text-sm font-bold text-gray-400">{rank}</span>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium truncate ${isMe ? "text-blue-700" : "text-gray-700"}`}>
-                    {entry.name}
-                    {isMe && <span className="ml-2 text-xs text-blue-500">（あなた）</span>}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className={`text-sm font-bold tabular-nums ${rank <= 3 ? "text-gray-800" : "text-gray-600"}`}>
-                    {formatDuration(entry.totalMinutes)}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-          {ranking.length === 0 && (
-            <div className="px-6 py-12 text-center text-gray-400 text-sm">
-              今月の勤怠データはまだありません
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
