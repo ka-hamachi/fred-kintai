@@ -60,6 +60,32 @@ export async function PUT(req: NextRequest) {
   return NextResponse.json(attendance);
 }
 
+export async function DELETE(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user.role !== "admin") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const attendanceId = searchParams.get("id");
+
+  if (!attendanceId) {
+    return NextResponse.json({ error: "勤怠IDが必要です" }, { status: 400 });
+  }
+
+  const existing = await prisma.attendance.findUnique({
+    where: { id: attendanceId },
+  });
+
+  if (!existing) {
+    return NextResponse.json({ error: "勤怠記録が見つかりません" }, { status: 404 });
+  }
+
+  await prisma.attendance.delete({ where: { id: attendanceId } });
+
+  return NextResponse.json({ success: true });
+}
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session || session.user.role !== "admin") {

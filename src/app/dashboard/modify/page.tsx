@@ -275,6 +275,29 @@ export default function ModifyPage() {
     setProcessingRequestId(null);
   };
 
+  const handleDelete = async (record: Attendance) => {
+    const dateLabel = new Date(record.date + "T00:00:00").toLocaleDateString("ja-JP", {
+      month: "numeric",
+      day: "numeric",
+      weekday: "short",
+    });
+    const timeLabel = formatTime(record.clockIn);
+    if (!confirm(`${dateLabel} ${timeLabel} の出勤記録を削除しますか？\nこの操作は取り消せません。`)) return;
+
+    try {
+      const res = await fetch(`/api/attendance/modify?id=${record.id}`, { method: "DELETE" });
+      if (res.ok) {
+        setMessage({ type: "success", text: "勤怠記録を削除しました" });
+        fetchRecords();
+      } else {
+        const data = await res.json();
+        setMessage({ type: "error", text: data.error || "削除に失敗しました" });
+      }
+    } catch {
+      setMessage({ type: "error", text: "エラーが発生しました" });
+    }
+  };
+
   const handleBreakChange = async (attendanceId: string, minutes: number) => {
     setSavingBreakId(attendanceId);
     try {
@@ -720,12 +743,23 @@ export default function ModifyPage() {
                     <td className="px-6 py-4 text-sm font-medium text-gray-700">{formatDuration(record.workDuration)}</td>
                     <td className="px-6 py-4 text-sm text-gray-400">{record.modifiedBy || "-"}</td>
                     <td className="px-6 py-4">
-                      <button
-                        onClick={() => startEdit(record)}
-                        className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-xs font-medium hover:bg-amber-100 transition-colors"
-                      >
-                        修正
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => startEdit(record)}
+                          className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-xs font-medium hover:bg-amber-100 transition-colors"
+                        >
+                          修正
+                        </button>
+                        <button
+                          onClick={() => handleDelete(record)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="削除"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
